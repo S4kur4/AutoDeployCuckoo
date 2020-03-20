@@ -77,7 +77,7 @@ else
 	configureVirtualbox $1
 	configureSystem
 	configCuckoo
-	nohup cuckoo > ~/Desktop/cuckoo_log.log &
-	nohup cuckoo web -H 0.0.0.0 -p 8000 > ~/Desktop/cuckoo_web_log.log &
+	cuckoo &> ~/Desktop/cuckoo.log &
+	cuckoo web -H 0.0.0.0 -p 8000 &> ~/Desktop/cuckoo_web.log &
 	echo "[+] Deploied done, Cuckoo web service runs on port 8000"
 fi
