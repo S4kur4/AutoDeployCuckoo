@@ -7,7 +7,7 @@ More infomation: [Install a Cuckoo Sandbox in 12 steps](https://0x0c.cc/2020/03/
 Prepare a clean Ubuntu (Ubuntu Desktop 18.04.5 is recommended), then running following command:
 
 ```
-bash < (curl -sS -L https://raw.githubusercontent.com/S4kur4/AutoDeployCuckoo/master/install.sh)
+bash <(curl -sS -L https://raw.githubusercontent.com/S4kur4/AutoDeployCuckoo/master/install.sh)
 ```
 
 Or you can download `install.sh` maunually run it.
