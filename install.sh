@@ -5,26 +5,38 @@
 # https://github.com/S4kur4/AutoDeployCuckoo
 # https://0x0c.cc/2020/03/19/Install-a-Cuckoo-Sandbox-in-12-steps
 
-function downloadAgent() {
-	# Agent.ova is a Windows7 (x86) virtual machine and used to be an Cuckoo agent
-	url="https://drive.google.com/u/0/uc?id=1uGxNwvSuSIhokeuX9N61D8VtyFDoK0-2&export=download"
-	# Download from google drive
-	gdown --speed=50MB $url -O ~/Downloads/Agent.ova
-}
-
-function installDependencies() {
+function updateDependencies() {
 	# Update system dependencies
 	sudo apt-get update -y && sudo apt-get upgrade -y
 
-	# Install basic system dependencies
 	# https://askubuntu.com/questions/339790/how-can-i-prevent-apt-get-aptitude-from-showing-dialogs-during-installation/340846
 	echo iptables-persistent iptables-persistent/autosave_v4 boolean true | sudo debconf-set-selections
 	echo iptables-persistent iptables-persistent/autosave_v6 boolean true | sudo debconf-set-selections
-	sudo apt-get install -y virtualbox vim curl net-tools htop python python-pip python-dev libffi-dev libssl-dev python-virtualenv python-setuptools python-magic python-libvirt ssdeep libjpeg-dev zlib1g-dev swig mongodb postgresql libpq-dev build-essential git libpcre3 libpcre3-dev libpcre++-dev libfuzzy-dev automake make libtool gcc tcpdump dh-autoreconf flex bison libjansson-dev libmagic-dev libyaml-dev libpython2.7-dev tcpdump apparmor-utils iptables-persistent
+}
 
+function downloadAgent() {
+	# Install gdown
+	sudo pip install gdown --no-use-pep517
+	# Agent.ova is a Windows7 (x86) virtual machine and used to be an Cuckoo agent
+	url="https://drive.google.com/u/0/uc?id=1uGxNwvSuSIhokeuX9N61D8VtyFDoK0-2&export=download"
+	# Download from google drive
+	mkdir ~/Downloads
+	gdown --speed=50MB $url -O ~/Downloads/Agent.ova
+}
+
+function installCuckooDependencies() {
+	# Install basic system dependencies
+	sudo apt-get install -y vim curl net-tools htop python python-pip python-dev libffi-dev libssl-dev python-virtualenv python-setuptools python-magic python-libvirt ssdeep libjpeg-dev zlib1g-dev swig mongodb postgresql libpq-dev build-essential git libpcre3 libpcre3-dev libpcre++-dev libfuzzy-dev automake make libtool gcc tcpdump dh-autoreconf flex bison libjansson-dev libmagic-dev libyaml-dev libpython2.7-dev tcpdump apparmor-utils iptables-persistent
+	
+	# Install virtualbox 6.1.2
+	wget https://download.virtualbox.org/virtualbox/6.1.2/virtualbox-6.1_6.1.2-135662~Ubuntu~bionic_amd64.deb -O ~/Downloads/virtualbox-6.1_6.1.2-135662~Ubuntu~bionic_amd64.deb
+	sudo dpkg -i ~/Downloads/virtualbox-6.1_6.1.2-135662~Ubuntu~bionic_amd64.deb
+	sudo apt install -f -y
+	
 	sudo pip install --upgrade pip
 	# Install Python dependencies
-	sudo pip install -U gdown==3.10.0 sqlalchemy==1.3.3 pefile==2019.4.18 pyrsistent==0.17.0 dpkt==1.8.7 jinja2==2.9.6 pymongo==3.0.3 bottle yara-python==3.6.3 requests==2.13.0 python-dateutil==2.4.2 chardet==2.3.0 setuptools psycopg2 pycrypto pydeep distorm3 cuckoo==2.0.7 weasyprint==0.36 m2crypto openpyxl ujson pycrypto pytz pyOpenSSL
+	sudo pip install sqlalchemy==1.3.3 pefile==2019.4.18 pyrsistent==0.14.1 dpkt==1.8.7 jinja2==2.9.6 pymongo==3.0.3 bottle==0.12.21 yara-python==3.6.3 requests==2.13.0 python-dateutil==2.4.2 chardet==2.3.0 setuptools==44.1.1 psycopg2==2.8.6 pycrypto==2.6.1 pydeep==0.4 distorm3==3.5.2 cryptography==3.3.2 cffi==1.15.1
+	sudo pip install cuckoo==2.0.7 weasyprint==0.36 m2crypto==0.38.0 openpyxl==2.6.4 ujson==2.0.3 pytz==2020.1 pyOpenSSL==21.0.0
 	# Reinstall werkzeug
 	sudo pip uninstall --yes werkzeug && sudo pip install werkzeug==0.16.1
 
@@ -76,15 +88,20 @@ function configCuckoo() {
 	sed "148d" ~/.cuckoo/conf/processing.conf > ~/.cuckoo/conf/tmp.conf && sed -i "/virustotal]/a\enabled = yes" ~/.cuckoo/conf/tmp.conf && rm -rf ~/.cuckoo/conf/processing.conf && mv ~/.cuckoo/conf/tmp.conf ~/.cuckoo/conf/processing.conf
 }
 
-echo -e "\033[41;30m-----------------------------------------\033[0m"
-echo -e "\033[41;30m Step 1: Install and update dependencies \033[0m"
-echo -e "\033[41;30m-----------------------------------------\033[0m"
-installDependencies
+echo -e "\033[41;30m--------------------------------\033[0m"
+echo -e "\033[41;30m Step 0: Updating and Upgrading \033[0m"
+echo -e "\033[41;30m--------------------------------\033[0m"
+updateDependencies
 
 echo -e "\033[41;30m--------------------------------------------------\033[0m"
-echo -e "\033[41;30m Step 2: Download Agent.ova virtual machine file  \033[0m"
+echo -e "\033[41;30m Step 1: Download Agent.ova virtual machine file  \033[0m"
 echo -e "\033[41;30m--------------------------------------------------\033[0m"
 downloadAgent
+
+echo -e "\033[41;30m-----------------------------------------\033[0m"
+echo -e "\033[41;30m Step 2: Install and update Cuckoo dependencies \033[0m"
+echo -e "\033[41;30m-----------------------------------------\033[0m"
+installCuckooDependencies
 
 echo -e "\033[41;30m------------------------------\033[0m"
 echo -e "\033[41;30m Step 3: Configure VirtualBox \033[0m"
