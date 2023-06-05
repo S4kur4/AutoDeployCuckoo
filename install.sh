@@ -14,17 +14,12 @@ function updateDependencies() {
 	echo iptables-persistent iptables-persistent/autosave_v6 boolean true | sudo debconf-set-selections
 }
 
-function downloadAgent() {
-	# Install gdown
-	sudo pip install gdown --no-use-pep517
-	# Agent.ova is a Windows7 (x86) virtual machine and used to be an Cuckoo agent
-	url="https://drive.google.com/u/0/uc?id=1uGxNwvSuSIhokeuX9N61D8VtyFDoK0-2&export=download"
-	# Download from google drive
-	mkdir ~/Downloads
-	gdown --speed=50MB $url -O ~/Downloads/Agent.ova
-}
-
 function installCuckooDependencies() {
+	# Create ~/Downloads folder if doesn't exist
+	if [ ! -d "/root/Downloads" ]; then
+    mkdir "/root/Downloads"
+    fi
+
 	# Install basic system dependencies
 	sudo apt-get install -y vim curl net-tools htop python python-pip python-dev libffi-dev libssl-dev python-virtualenv python-setuptools python-magic python-libvirt ssdeep libjpeg-dev zlib1g-dev swig mongodb postgresql libpq-dev build-essential git libpcre3 libpcre3-dev libpcre++-dev libfuzzy-dev automake make libtool gcc tcpdump dh-autoreconf flex bison libjansson-dev libmagic-dev libyaml-dev libpython2.7-dev tcpdump apparmor-utils iptables-persistent
 	
@@ -46,6 +41,15 @@ function installCuckooDependencies() {
 	git clone https://github.com/volatilityfoundation/volatility.git ~/Downloads/volatility && cd ~/Downloads/volatility && sudo python ./setup.py build && sudo python ./setup.py install && cd ~
 }
 
+function downloadAgent() {
+	# Install gdown
+	sudo pip install gdown --no-use-pep517
+	# Agent.ova is a Windows7 (x86) virtual machine and used to be an Cuckoo agent
+	url="https://drive.google.com/u/0/uc?id=1uGxNwvSuSIhokeuX9N61D8VtyFDoK0-2&export=download"
+	# Download from google drive
+	gdown --speed=50MB $url -O ~/Downloads/Agent.ova
+}
+
 function configureVirtualbox() {
 	# Create hostonly ethernet adapter
 	vboxmanage hostonlyif create && vboxmanage hostonlyif ipconfig vboxnet0 --ip 192.168.56.1 --netmask 255.255.255.0
@@ -55,6 +59,92 @@ function configureVirtualbox() {
 	vboxmanage setproperty machinefolder /data/VirtualBoxVms
 
 	# Import Agent.ova and take a snapshot
+	vboxmanage import $1 && vboxmanage modifyvm "Agent" --name "cuckoo1" && vboxmanage startvm "cuckoo1" --type headless
+	sleep 3m
+	vboxmanage snapshot "cuckoo1" take "snap1" && vboxmanage controlvm "cuckoo1" poweroff
+}
+
+function configureNetwork() {
+	# Configure tcpdump
+	sudo aa-disable /usr/sbin/tcpdump && sudo setcap cap_net_raw,cap_net_admin=eip /usr/sbin/tcpdump
+
+	# Open Ip forwarding
+	sudo iptables -A FORWARD -i vboxnet0 -s 192.168.56.0/24 -m conntrack --ctstate NEW -j ACCEPT && sudo iptables -A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT && sudo iptables -A POSTROUTING -t nat -j MASQUERADE
+	sudo sed -i "s/#net.ipv4.ip_forward=/net.ipv4.ip_forward=/g" /etc/sysctl.conf
+
+	# Configuration persistence
+	sudo sysctl -p /etc/sysctl.conf && sudo netfilter-persistent save
+
+	# Configure system DNS
+	sudo sed -i "s/127.0.0.53/8.8.8.8/g" /etc/resolv.conf
+
+}
+
+function configCuckoo() {
+	# initialize cuckoo
+	sudo service mongodb start && cuckoo && cuckoo community
+
+	# Add Agent to cuckoo
+	cuckoo machine --delete cuckoo1 && cuckoo machine --add cuckoo1 192.168.56.5 --platform windows --snapshot snap1
+
+	# open MongoDB and VirusTotal
+	sed "45d" ~/.cuckoo/conf/reporting.conf > ~/.cuckoo/conf/tmp.conf && sed -i "/mongodb]/a\enabled = yes" ~/.cuckoo/conf/tmp.conf && rm -rf ~/.cuckoo/conf/reporting.conf && mv ~/.cuckoo/conf/tmp.conf ~/.cuckoo/conf/reporting.conf
+	sed "148d" ~/.cuckoo/conf/processing.conf > ~/.cuckoo/conf/tmp.conf && sed -i "/virustotal]/a\enabled = yes" ~/.cuckoo/conf/tmp.conf && rm -rf ~/.cuckoo/conf/processing.conf && mv ~/.cuckoo/conf/tmp.conf ~/.cuckoo/conf/processing.conf
+}
+
+function clearScreen() {
+	# clear screen
+	echo -e "\033[2J\033[H"
+}
+
+clearScreen
+echo -e "\033[41;30m--------------------------------\033[0m"
+echo -e "\033[41;30m Step 0: Updating and Upgrading \033[0m"
+echo -e "\033[41;30m--------------------------------\033[0m"
+updateDependencies
+clearScreen
+
+echo -e "\033[41;30m-----------------------------------------\033[0m"
+echo -e "\033[41;30m Step 1: Install and update Cuckoo dependencies \033[0m"
+echo -e "\033[41;30m-----------------------------------------\033[0m"
+installCuckooDependencies
+clearScreen
+
+echo -e "\033[41;30m--------------------------------------------------\033[0m"
+echo -e "\033[41;30m Step 2: Download Agent.ova virtual machine file  \033[0m"
+echo -e "\033[41;30m--------------------------------------------------\033[0m"
+downloadAgent
+clearScreen
+
+echo -e "\033[41;30m------------------------------\033[0m"
+echo -e "\033[41;30m Step 3: Configure VirtualBox \033[0m"
+echo -e "\033[41;30m------------------------------\033[0m"
+configureVirtualbox ~/Downloads/Agent.ova
+clearScreen
+
+echo -e "\033[41;30m---------------------------\033[0m"
+echo -e "\033[41;30m Step 4: Configure Network \033[0m"
+echo -e "\033[41;30m---------------------------\033[0m"
+configureNetwork
+clearScreen
+
+echo -e "\033[41;30m--------------------------\033[0m"
+echo -e "\033[41;30m Step 5: Configure Cuckoo \033[0m"
+echo -e "\033[41;30m--------------------------\033[0m"
+configCuckoo
+clearScreen
+
+echo -e "\033[41;30m-----------------------------\033[0m"
+echo -e "\033[41;30m Step 6: Run Cuckoo services \033[0m"
+echo -e "\033[41;30m-----------------------------\033[0m"
+cuckoo &> ~/Desktop/cuckoo.log &
+cuckoo web -H 0.0.0.0 -p 8000 &> ~/Desktop/cuckoo_web.log &
+clearScreen
+
+echo -e "\033[42;30m-----------------------------------------------\033[0m"
+echo -e "\033[42;30m Done! Cuckoo web service running on 0:0:0:0:8000 \033[0m"
+echo -e "\033[42;30m-----------------------------------------------\033[0m"
+
 	vboxmanage import $1 && vboxmanage modifyvm "Agent" --name "cuckoo1" && vboxmanage startvm "cuckoo1" --type headless
 	sleep 3m
 	vboxmanage snapshot "cuckoo1" take "snap1" && vboxmanage controlvm "cuckoo1" poweroff
