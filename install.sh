@@ -15,17 +15,12 @@ function updateDependencies() {
 }
 
 function installCuckooDependencies() {
-	# Create ~/Downloads folder if doesn't exist
-	if [ ! -d "/root/Downloads" ]; then
-    mkdir "/root/Downloads"
-    fi
-
 	# Install basic system dependencies
 	sudo apt-get install -y vim curl net-tools htop python python-pip python-dev libffi-dev libssl-dev python-virtualenv python-setuptools python-magic python-libvirt ssdeep libjpeg-dev zlib1g-dev swig mongodb postgresql libpq-dev build-essential git libpcre3 libpcre3-dev libpcre++-dev libfuzzy-dev automake make libtool gcc tcpdump dh-autoreconf flex bison libjansson-dev libmagic-dev libyaml-dev libpython2.7-dev tcpdump apparmor-utils iptables-persistent
 	
 	# Install virtualbox 6.1.2
-	wget https://download.virtualbox.org/virtualbox/6.1.2/virtualbox-6.1_6.1.2-135662~Ubuntu~bionic_amd64.deb -O ~/Downloads/virtualbox-6.1_6.1.2-135662~Ubuntu~bionic_amd64.deb
-	sudo dpkg -i ~/Downloads/virtualbox-6.1_6.1.2-135662~Ubuntu~bionic_amd64.deb
+	wget https://download.virtualbox.org/virtualbox/6.1.2/virtualbox-6.1_6.1.2-135662~Ubuntu~bionic_amd64.deb -O /tmp/virtualbox-6.1_6.1.2-135662_Ubuntu_bionic_amd64.deb
+	sudo dpkg -i /tmp/virtualbox-6.1_6.1.2-135662_Ubuntu_bionic_amd64.deb
 	sudo apt install -f -y
 	
 	sudo pip install --upgrade pip
@@ -36,9 +31,9 @@ function installCuckooDependencies() {
 	sudo pip uninstall --yes werkzeug && sudo pip install werkzeug==0.16.1
 
 	# Install pySSDeep&yara&volatility
-	git clone https://github.com/bunzen/pySSDeep.git ~/Downloads/pySSDeep && cd ~/Downloads/pySSDeep && sudo python setup.py build && sudo python setup.py install && cd ~
-	wget https://github.com/VirusTotal/yara/archive/v3.7.1.tar.gz -O ~/Downloads/v3.7.1.tar.gz && tar -xzvf ~/Downloads/v3.7.1.tar.gz -C ~/Downloads && cd ~/Downloads/yara-3.7.1 && sudo ./bootstrap.sh && sudo ./configure --with-crypto --enable-cuckoo --enable-magic && sudo make && sudo make install && cd ~
-	git clone https://github.com/volatilityfoundation/volatility.git ~/Downloads/volatility && cd ~/Downloads/volatility && sudo python ./setup.py build && sudo python ./setup.py install && cd ~
+	git clone https://github.com/bunzen/pySSDeep.git /tmp/pySSDeep && cd /tmp/pySSDeep && sudo python setup.py build && sudo python setup.py install && cd ~
+	wget https://github.com/VirusTotal/yara/archive/v3.7.1.tar.gz -O /tmp/v3.7.1.tar.gz && tar -xzvf /tmp/v3.7.1.tar.gz -C /tmp && cd /tmp/yara-3.7.1 && sudo ./bootstrap.sh && sudo ./configure --with-crypto --enable-cuckoo --enable-magic && sudo make && sudo make install && cd ~
+	git clone https://github.com/volatilityfoundation/volatility.git /tmp/volatility && cd /tmp/volatility && sudo python ./setup.py build && sudo python ./setup.py install && cd ~
 }
 
 function downloadAgent() {
@@ -47,7 +42,7 @@ function downloadAgent() {
 	# Agent.ova is a Windows7 (x86) virtual machine and used to be an Cuckoo agent
 	url="https://drive.google.com/u/0/uc?id=1uGxNwvSuSIhokeuX9N61D8VtyFDoK0-2&export=download"
 	# Download from google drive
-	gdown --speed=50MB $url -O ~/Downloads/Agent.ova
+	gdown --speed=50MB $url -O /tmp/Agent.ova
 }
 
 function configureVirtualbox() {
@@ -98,49 +93,52 @@ function clearScreen() {
 }
 
 clearScreen
-echo -e "\033[41;30m--------------------------------\033[0m"
-echo -e "\033[41;30m Step 0: Updating and Upgrading \033[0m"
-echo -e "\033[41;30m--------------------------------\033[0m"
+echo -e "\033[41;30m------------------------------------------------\033[0m"
+echo -e "\033[41;30m Step 1: Update and upgrade system dependencies \033[0m"
+echo -e "\033[41;30m------------------------------------------------\033[0m"
 updateDependencies
 clearScreen
 
-echo -e "\033[41;30m-----------------------------------------\033[0m"
-echo -e "\033[41;30m Step 1: Install and update Cuckoo dependencies \033[0m"
-echo -e "\033[41;30m-----------------------------------------\033[0m"
+echo -e "\033[41;30m------------------------------------------------\033[0m"
+echo -e "\033[41;30m Step 2: Install and update Cuckoo dependencies \033[0m"
+echo -e "\033[41;30m------------------------------------------------\033[0m"
 installCuckooDependencies
 clearScreen
 
-echo -e "\033[41;30m--------------------------------------------------\033[0m"
-echo -e "\033[41;30m Step 2: Download Agent.ova virtual machine file  \033[0m"
-echo -e "\033[41;30m--------------------------------------------------\033[0m"
+echo -e "\033[41;30m-------------------------------------------------\033[0m"
+echo -e "\033[41;30m Step 3: Download Agent.ova virtual machine file \033[0m"
+echo -e "\033[41;30m-------------------------------------------------\033[0m"
 downloadAgent
 clearScreen
 
 echo -e "\033[41;30m------------------------------\033[0m"
-echo -e "\033[41;30m Step 3: Configure VirtualBox \033[0m"
+echo -e "\033[41;30m Step 4: Configure VirtualBox \033[0m"
 echo -e "\033[41;30m------------------------------\033[0m"
-configureVirtualbox ~/Downloads/Agent.ova
+configureVirtualbox /tmp/Agent.ova
 clearScreen
 
 echo -e "\033[41;30m---------------------------\033[0m"
-echo -e "\033[41;30m Step 4: Configure Network \033[0m"
+echo -e "\033[41;30m Step 5: Configure Network \033[0m"
 echo -e "\033[41;30m---------------------------\033[0m"
 configureNetwork
 clearScreen
 
 echo -e "\033[41;30m--------------------------\033[0m"
-echo -e "\033[41;30m Step 5: Configure Cuckoo \033[0m"
+echo -e "\033[41;30m Step 6: Configure Cuckoo \033[0m"
 echo -e "\033[41;30m--------------------------\033[0m"
 configCuckoo
 clearScreen
 
 echo -e "\033[41;30m-----------------------------\033[0m"
-echo -e "\033[41;30m Step 6: Run Cuckoo services \033[0m"
+echo -e "\033[41;30m Step 7: Run Cuckoo services \033[0m"
 echo -e "\033[41;30m-----------------------------\033[0m"
-cuckoo &> ~/Desktop/cuckoo.log &
-cuckoo web -H 0.0.0.0 -p 8000 &> ~/Desktop/cuckoo_web.log &
+cuckoo &> /var/log/cuckoo.log &
+cuckoo web -H 0.0.0.0 -p 8000 &> /var/log/cuckoo_web.log &
+ufw allow 8000
 clearScreen
 
-echo -e "\033[42;30m-----------------------------------------------\033[0m"
+echo -e "\033[42;30m--------------------------------------------------\033[0m"
 echo -e "\033[42;30m Done! Cuckoo web service running on 0:0:0:0:8000 \033[0m"
-echo -e "\033[42;30m-----------------------------------------------\033[0m"
+echo -e "\033[42;30m Cuckoo log: /var/log/cuckoo.log                  \033[0m"
+echo -e "\033[42;30m Cuckoo web service log: /var/log/cuckoo_web.log  \033[0m"
+echo -e "\033[42;30m--------------------------------------------------\033[0m"
